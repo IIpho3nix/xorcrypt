@@ -80,12 +80,26 @@ std::string getOutputFileName(const std::string& inputFile, const std::string& o
 }
 
 void generateRandomBytes(size_t numBytes, std::vector<unsigned char>& data) {
+    static std::random_device rd;
+    static std::seed_seq seed{rd(), rd(), rd(), rd(), rd(), rd(), rd(), rd()};
+    static std::mt19937_64 gen(seed);
+    static std::uniform_int_distribution<unsigned char> dist(0, 255);
+
+    static size_t bytesSinceLastReseed = 0;
+    static std::uniform_int_distribution<size_t> reseedDist(1000, 5000);
+    static size_t nextReseed = reseedDist(rd);
+
     data.resize(numBytes);
-    std::random_device rd;
-    std::mt19937 gen(rd());
-    std::uniform_int_distribution<unsigned char> dist(0, 255);
     for (size_t i = 0; i < numBytes; ++i) {
+        if (bytesSinceLastReseed >= nextReseed) {
+            std::seed_seq newSeed{rd(), rd(), rd(), rd(), rd(), rd(), rd(), rd()};
+            gen.seed(newSeed);
+            bytesSinceLastReseed = 0;
+            nextReseed = reseedDist(rd);
+        }
+
         data[i] = dist(gen);
+        ++bytesSinceLastReseed;
     }
 }
 
